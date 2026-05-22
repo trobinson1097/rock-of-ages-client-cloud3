@@ -1,9 +1,11 @@
 import { useState, useEffect, useRef } from "react"
-import { getRockImage } from "../services/rockImageService"
+import { getRockImage, getDownloadUrl } from "../services/rockImageService"
 
 export const RockImage = ({ imageId }) => {
   const apiUrl = import.meta.env.VITE_API_URL
   const [image, setImage] = useState(null)
+  const [thumbnailUrl, setThumbnailUrl] = useState(null)
+  const [fullUrl, setFullUrl] = useState(null)
   const [showOriginal, setShowOriginal] = useState(false)
   const intervalRef = useRef(null)
 
@@ -28,9 +30,28 @@ export const RockImage = ({ imageId }) => {
     return () => clearInterval(intervalRef.current)
   }, [imageId])
 
+  useEffect(() => {
+    if (!image || image.status === "processing") return
+
+    const fetchUrls = async () => {
+      try {
+        const [small, large] = await Promise.all([
+          getDownloadUrl(apiUrl, imageId, "small"),
+          getDownloadUrl(apiUrl, imageId, "large"),
+        ])
+        setThumbnailUrl(small)
+        setFullUrl(large)
+      } catch (err) {
+        // presigned URL fetch failed — images will not display
+      }
+    }
+
+    fetchUrls()
+  }, [image?.status])
+
   if (!image) return null
 
-  if (image.status === "processing") {
+  if (image.status === "processing" || !thumbnailUrl) {
     return (
       <div className="mt-2 flex items-center gap-2 text-sm text-gray-500">
         <svg className="animate-spin h-4 w-4 text-gray-400" viewBox="0 0 24 24" fill="none">
@@ -46,7 +67,7 @@ export const RockImage = ({ imageId }) => {
     <>
       {/* Thumbnail */}
       <img
-        src={image.thumbnail_small_url}
+        src={thumbnailUrl}
         alt="Rock thumbnail"
         onClick={() => setShowOriginal(true)}
         className="mt-2 h-20 w-20 object-cover rounded cursor-pointer hover:opacity-80 transition-opacity"
@@ -67,7 +88,7 @@ export const RockImage = ({ imageId }) => {
               ✕
             </button>
             <img
-              src={image.original_url}
+              src={fullUrl}
               alt="Rock full size"
               className="max-h-screen max-w-full rounded-md"
             />

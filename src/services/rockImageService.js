@@ -29,3 +29,12 @@ export const getRockImage = async (apiUrl, imageId) => {
   if (!res.ok) throw new Error(`Failed to fetch image: ${res.status}`)
   return res.json() // { id, rock, original_url, thumbnail_small_url, status, ... }
 }
+
+export const getDownloadUrl = async (apiUrl, imageId, size = 'medium') => {
+  const res = await fetch(`${apiUrl}/rock-images/${imageId}/download-url/?size=${size}`, {
+    headers: { Authorization: `Token ${getToken()}` },
+  })
+  if (!res.ok) throw new Error(`Failed to get download URL: ${res.status}`)
+  const data = await res.json()
+  return data.presigned_url
+}
